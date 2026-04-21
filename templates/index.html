@@ -1,22 +1,86 @@
-<h2>AI Control Panel</h2>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Printer AI - Live View</title>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #e0e0e0;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Centers horizontally */
+            justify-content: center; /* Centers vertically */
+            min-height: 100vh;
+            margin: 0;
+        }
 
-<button onclick="setMode('monitor')">Monitor</button>
-<button onclick="setMode('calibrate')">Calibration</button>
+        .container {
+            text-align: center;
+            max-width: 90%;
+        }
 
-<br><br>
+        .camera-container {
+            position: relative;
+            border: 2px solid #444;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
 
-<img src="/debug" width="400">
+        #camera-preview {
+            display: block;
+            width: 640px; /* Base width */
+            transition: width 0.2s ease; /* Smooth scaling */
+            margin: 0 auto;
+        }
 
-<script>
-function setMode(mode){
-    fetch("/update", {
-        method:"POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({"mode": mode})
-    });
-}
+        .controls {
+            background: #2d2d2d;
+            padding: 15px 25px;
+            border-radius: 30px;
+            display: inline-block;
+        }
 
-setInterval(()=>{
-    document.querySelector("img").src="/debug?"+Date.now();
-},1000);
-</script>
+        input[type=range] {
+            cursor: pointer;
+            width: 200px;
+        }
+        
+        h2 { margin-bottom: 10px; color: #00ff99; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Printer AI Monitor</h2>
+        
+        <div class="camera-container">
+            <img id="camera-preview" src="/debug" alt="Camera Feed">
+        </div>
+
+        <div class="controls">
+            <label>Preview Scale: </label>
+            <input type="range" id="scaler" min="400" max="1200" value="640" oninput="updateScale(this.value)">
+            <span id="val">640px</span>
+        </div>
+    </div>
+
+    <script>
+        // Smoothly upscale the image
+        function updateScale(val) {
+            document.getElementById('camera-preview').style.width = val + 'px';
+            document.getElementById('val').innerText = val + 'px';
+        }
+
+        // Refresh the image every 200ms (5fps)
+        // Since /debug is a raw image, we append a timestamp to prevent browser caching
+        setInterval(function() {
+            var img = document.getElementById('camera-preview');
+            img.src = "/debug?t=" + new Date().getTime();
+        }, 200);
+    </script>
+</body>
+</html>
