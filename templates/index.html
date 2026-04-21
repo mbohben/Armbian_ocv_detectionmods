@@ -1,0 +1,22 @@
+<h2>AI Control Panel</h2>
+
+<button onclick="setMode('monitor')">Monitor</button>
+<button onclick="setMode('calibrate')">Calibration</button>
+
+<br><br>
+
+<img src="/debug" width="400">
+
+<script>
+function setMode(mode){
+    fetch("/update", {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({"mode": mode})
+    });
+}
+
+setInterval(()=>{
+    document.querySelector("img").src="/debug?"+Date.now();
+},1000);
+</script>
