@@ -1,27 +1,44 @@
 {
-  "motion_threshold": 80,
-  "motion_spike": 60,
-  "edge_threshold": 4500,
+  "version": "0.1-alpha",
 
-  "alert_cooldown": 30,
+  "mode": "monitor",
 
-  "mask_width": 140,
-  "mask_height": 100,
+  "printer": {
+    "type": "corexy_gantry",
 
-  "adaptive_mask": true,
-  "mask_scale": 1.6,
-  "mask_min": 80,
-  "mask_max": 220,
+    "kinematics": {
+      "x_min": 0,
+      "x_max": 235,
+      "y_min": 0,
+      "y_max": 250
+    },
 
-  "history_size": 6,
-  "fail_threshold": 3,
+    "bed": {
+      "x_min": 10,
+      "x_max": 225,
+      "y_min": 10,
+      "y_max": 240
+    }
+  },
 
-  "adaptive_enabled": true,
-  "motion_multiplier": 6.0,
-  "edge_multiplier": 1.4,
-  "baseline_frames": 50,
+  "camera": {
+    "width": 640,
+    "height": 480
+  },
 
-  "startup_delay": 10,
-  "alert_grace_period": 20,
-  "min_baseline_samples": 20
+  "calibration": {
+    "transform_matrix": [],
+    "mask_radius": 40
+  },
+
+  "detection": {
+    "motion_threshold": 100,
+    "edge_threshold": 5000,
+    "confidence_required": 3
+  },
+
+  "adaptive": {
+    "enabled": true,
+    "history": 50
+  }
 }
