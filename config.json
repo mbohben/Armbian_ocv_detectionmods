@@ -1,0 +1,27 @@
+{
+  "motion_threshold": 80,
+  "motion_spike": 60,
+  "edge_threshold": 4500,
+
+  "alert_cooldown": 30,
+
+  "mask_width": 140,
+  "mask_height": 100,
+
+  "adaptive_mask": true,
+  "mask_scale": 1.6,
+  "mask_min": 80,
+  "mask_max": 220,
+
+  "history_size": 6,
+  "fail_threshold": 3,
+
+  "adaptive_enabled": true,
+  "motion_multiplier": 6.0,
+  "edge_multiplier": 1.4,
+  "baseline_frames": 50,
+
+  "startup_delay": 10,
+  "alert_grace_period": 20,
+  "min_baseline_samples": 20
+}
