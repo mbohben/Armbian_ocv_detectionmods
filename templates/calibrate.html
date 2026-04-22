@@ -1,1 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bed Calibration</title>
+</head>
+<body>
 
+<h2>Click 4 Bed Corners</h2>
+
+<img id="cam" src="/frame" width="640" style="cursor: crosshair;">
+
+<script>
+const img = document.getElementById("cam");
+
+img.onclick = function(e) {
+    const rect = img.getBoundingClientRect();
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+
+    fetch("/click", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({x: x, y: y})
+    })
+    .then(r => r.json())
+    .then(d => console.log(d));
+};
+
+// refresh image
+setInterval(() => {
+    img.src = "/frame?" + new Date().getTime();
+}, 1000);
+</script>
+
+</body>
+</html>

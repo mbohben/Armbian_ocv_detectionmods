@@ -1,106 +1,22 @@
+<h2>AI Control Panel</h2>
+
+<button onclick="setMode('monitor')">Monitor</button>
+<button onclick="setMode('calibrate')">Calibration</button>
+
+<br><br>
+
+<img src="/debug" width="400">
+
 <script>
-    let points = [];
-    let isCalibrating = false;
-    const canvas = document.getElementById('cal-canvas');
-    const ctx = canvas.getContext('2d');
-    const status = document.getElementById('status-bar');
-    const debugImg = document.getElementById('debug-img');
-
-    canvas.width = 640;
-    canvas.height = 480;
-
-    function setMode(mode) {
-        isCalibrating = (mode === 'calibrate');
-        status.innerText = "Mode: " + mode.toUpperCase();
-        // Hide/Show canvas based on mode
-        canvas.style.pointerEvents = isCalibrating ? "auto" : "none";
-    }
-
-    function enableCalib() {
-        points = [];
-        setMode('calibrate');
-        draw();
-    }
-
-    canvas.addEventListener('click', (e) => {
-        if (!isCalibrating) return;
-        const rect = canvas.getBoundingClientRect();
-        // Calculate scale in case the image is CSS-resized
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        
-        const x = Math.round((e.clientX - rect.left) * scaleX);
-        const y = Math.round((e.clientY - rect.top) * scaleY);
-        
-        if (points.length < 4) {
-            points.push([x, y]);
-        } else {
-            points = [[x, y]]; 
-        }
-        draw();
+function setMode(mode){
+    fetch("/update", {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({"mode": mode})
     });
+}
 
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (!isCalibrating) return;
-
-        ctx.strokeStyle = "#00e676";
-        ctx.fillStyle = "#00e676";
-        ctx.lineWidth = 2;
-
-        points.forEach((p, i) => {
-            ctx.beginPath();
-            ctx.arc(p[0], p[1], 8, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.fillStyle = "white";
-            ctx.fillText(`P${i+1}`, p[0] + 12, p[1]);
-            ctx.fillStyle = "#00e676";
-        });
-
-        if (points.length > 1) {
-            ctx.beginPath();
-            ctx.moveTo(points[0][0], points[0][1]);
-            for(let i=1; i<points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
-            if (points.length === 4) ctx.closePath();
-            ctx.stroke();
-        }
-    }
-
-    function saveCalibration() {
-        if (points.length !== 4) {
-            alert("Please click all 4 corners (TL, TR, BR, BL)");
-            return;
-        }
-        fetch("/update", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                "calibration": { "transform_matrix": points },
-                "mode": "monitor"
-            })
-        }).then(() => {
-            status.innerText = "Matrix Calculated & Saved!";
-            setTimeout(() => {
-                setMode('monitor');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }, 2000);
-        });
-    }
-
-    function sendGcode(cmd) {
-        status.innerText = "Executing G-Code...";
-        fetch("/gcode", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({"command": cmd})
-        }).then(res => {
-            status.innerText = res.ok ? "Done: " + cmd : "G-Code Failed";
-        });
-    }
-
-    // Refresh the debug image
-    setInterval(() => {
-        debugImg.src = "/debug?t=" + Date.now();
-    }, 400);
+setInterval(()=>{
+    document.querySelector("img").src="/debug?"+Date.now();
+},1000);
 </script>
