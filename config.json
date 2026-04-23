@@ -1,44 +1,80 @@
 {
-  "version": "0.1-alpha",
-
-  "mode": "monitor",
-
-  "printer": {
-    "type": "corexy_gantry",
-
-    "kinematics": {
-      "x_min": 0,
-      "x_max": 235,
-      "y_min": 0,
-      "y_max": 250
-    },
-
-    "bed": {
-      "x_min": 10,
-      "x_max": 225,
-      "y_min": 10,
-      "y_max": 240
-    }
-  },
-
-  "camera": {
-    "width": 640,
-    "height": 480
-  },
-
-  "calibration": {
-    "transform_matrix": [],
-    "mask_radius": 40
-  },
-
+  "version": 2,
   "detection": {
-    "motion_threshold": 100,
-    "edge_threshold": 5000,
-    "confidence_required": 3
-  },
-
-  "adaptive": {
     "enabled": true,
-    "history": 50
+    "motion_threshold": 150,
+    "motion_warn_threshold": 80,
+    "edge_threshold": 5,
+    "min_blob_area": 500,
+    "max_blob_area": 50000,
+    "confidence_required": 3,
+    "fail_reset_frames": 10,
+    "ignore_small_changes": true
+  },
+  "roi": {
+    "enabled": true,
+    "x_min": 0.1,
+    "x_max": 0.9,
+    "y_min": 0.2,
+    "y_max": 0.8
+  },
+  "bed": {
+    "x_min": 0,
+    "x_max": 235,
+    "y_min": 0,
+    "y_max": 235
+  },
+  "calibration": {
+    "_note": "Points must follow printer native coordinate order. Each entry maps a pixel location on the camera frame to a real bed corner.",
+    "_order": [
+      "1: xbed=0,   ybed=0    \u2192 printer origin (front-left)",
+      "2: xbed=0,   ybed=max  \u2192 back-left",
+      "3: xbed=max, ybed=max  \u2192 back-right",
+      "4: xbed=max, ybed=0    \u2192 front-right"
+    ],
+    "bed_points": [
+      {
+        "label": "origin_fl",
+        "px": 203,
+        "py": 148
+      },
+      {
+        "label": "back_l",
+        "px": 369,
+        "py": 170
+      },
+      {
+        "label": "back_r",
+        "px": 466,
+        "py": 311
+      },
+      {
+        "label": "origin_fr",
+        "px": 264,
+        "py": 359
+      }
+    ],
+    "transform": "perspective",
+    "warp_output_px": 512
+  },
+  "mask": {
+    "enabled": true,
+    "radius": 40
+  },
+  "printer": {
+    "safe_z": 10,
+    "travel_speed": 6000,
+    "jog_speed": 3000
+  },
+  "actions": {
+    "pause_on_fail": false,
+    "capture_on_fail": true,
+    "save_path": "events/",
+    "cooldown_seconds": 10
+  },
+  "debug": {
+    "show_logs": true,
+    "print_scores": true,
+    "draw_overlay": false
   }
 }
