@@ -1,22 +1,488 @@
-<h2>AI Control Panel</h2>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRINTER_AI</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
 
-<button onclick="setMode('monitor')">Monitor</button>
-<button onclick="setMode('calibrate')">Calibration</button>
-
-<br><br>
-
-<img src="/debug" width="400">
-
-<script>
-function setMode(mode){
-    fetch("/update", {
-        method:"POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({"mode": mode})
-    });
+:root {
+  --bg:       #080a0d;
+  --bg2:      #0d1117;
+  --bg3:      #111820;
+  --border:   #1e2a38;
+  --amber:    #f0a500;
+  --amber-dim:#7a5200;
+  --cyan:     #00c8d4;
+  --red:      #e03c3c;
+  --warn:     #e08c1a;
+  --green:    #27c480;
+  --text:     #c8d0dc;
+  --text-dim: #4a5568;
 }
 
-setInterval(()=>{
-    document.querySelector("img").src="/debug?"+Date.now();
-},1000);
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ─────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: var(--amber);
+}
+
+#toast {
+  font-size: 11px;
+  color: var(--text-dim);
+  transition: color .3s;
+}
+#toast.ok   { color: var(--green); }
+#toast.err  { color: var(--red);   }
+#toast.warn { color: var(--warn);  }
+
+/* ── LAYOUT ─────────────────────────────── */
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Mobile: stack vertically */
+@media (max-width: 640px) {
+  .workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  .video-wrap {
+    min-height: 200px !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel { overflow-y: visible; }
+}
+
+/* ── STREAM SIZE SELECTOR ───────────────── */
+.size-selector {
+  display: flex;
+  gap: 3px;
+}
+.size-btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 3px 7px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.size-btn:hover  { border-color: var(--cyan); color: var(--cyan); }
+.size-btn.active { border-color: var(--amber); color: var(--amber); background: rgba(240,165,0,.07); }
+
+/* ── VIDEO ──────────────────────────────── */
+.video-wrap {
+  position: relative;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--border);
+  min-height: 400px;
+}
+
+#stream {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* detection badge */
+#det-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 4px 10px;
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  border: 1px solid var(--border);
+  background: rgba(8,10,13,.75);
+  backdrop-filter: blur(4px);
+  color: var(--text-dim);
+  transition: color .4s, border-color .4s;
+}
+#det-badge.ok    { color: var(--green); border-color: var(--green); }
+#det-badge.warn  { color: var(--warn);  border-color: var(--warn);  }
+#det-badge.fail  { color: var(--red);   border-color: var(--red);   animation: blink .6s step-end infinite; }
+#det-badge.blind { color: var(--text-dim); border-color: var(--text-dim); }
+
+@keyframes blink { 50% { opacity: 0; } }
+
+/* score bars */
+.score-row {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  gap: 10px;
+}
+.score-bar { flex: 1; }
+.score-label { font-size: 10px; color: var(--text-dim); margin-bottom: 3px; }
+.bar-track {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width .4s;
+  background: var(--cyan);
+  width: 0%;
+}
+#bar-motion-fill { background: var(--amber); }
+#bar-edge-fill   { background: var(--cyan);  }
+
+/* ── SIDEBAR ─────────────────────────────── */
+.panel {
+  background: var(--bg2);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.section {
+  border-bottom: 1px solid var(--border);
+  padding: 14px;
+}
+
+.section-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--amber-dim);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+/* position readout */
+.pos-grid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 6px;
+}
+.pos-cell {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  text-align: center;
+}
+.pos-axis { font-size: 10px; color: var(--text-dim); }
+.pos-val  { font-size: 16px; color: var(--amber); font-family: 'Orbitron',monospace; }
+
+/* inputs */
+.input-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.input-row label { color: var(--text-dim); line-height: 30px; width: 14px; }
+
+input[type=number], input[type=text] {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 5px 8px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  outline: none;
+  transition: border-color .2s;
+}
+input:focus { border-color: var(--amber); }
+
+/* buttons */
+.btn {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 7px 10px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+  text-align: center;
+}
+.btn:hover        { border-color: var(--amber); color: var(--amber); }
+.btn:active       { background: #1a1500; }
+.btn.full         { width: 100%; margin-bottom: 5px; }
+.btn.accent       { border-color: var(--amber-dim); color: var(--amber); }
+.btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+/* jog grid */
+.jog-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.jog-axis-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin: 6px 0 3px;
+  letter-spacing: 1px;
+}
+
+/* step selector */
+.step-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.step-btn {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 4px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s;
+}
+.step-btn.active, .step-btn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">PRINTER_AI</span>
+  <span id="toast">connecting…</span>
+</header>
+
+<div class="workspace">
+
+  <!-- ── VIDEO ── -->
+  <div class="video-wrap">
+    <img id="stream" alt="stream" src="/api/stream/mjpeg">
+    <div id="det-badge">INIT</div>
+
+    <div class="score-row">
+      <div class="score-bar">
+        <div class="score-label">MOTION <span id="score-motion">0</span></div>
+        <div class="bar-track"><div class="bar-fill" id="bar-motion-fill"></div></div>
+      </div>
+      <div class="score-bar">
+        <div class="score-label">EDGE <span id="score-edge">0</span></div>
+        <div class="bar-track"><div class="bar-fill" id="bar-edge-fill"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SIDEBAR ── -->
+  <div class="panel">
+
+    <!-- Position -->
+    <div class="section">
+      <div class="section-title">Position</div>
+      <div class="pos-grid">
+        <div class="pos-cell">
+          <div class="pos-axis">X</div>
+          <div class="pos-val" id="px">—</div>
+        </div>
+        <div class="pos-cell">
+          <div class="pos-axis">Y</div>
+          <div class="pos-val" id="py">—</div>
+        </div>
+        <div class="pos-cell">
+          <div class="pos-axis">Z</div>
+          <div class="pos-val" id="pz">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Absolute Move -->
+    <div class="section">
+      <div class="section-title">Absolute Move</div>
+      <div class="input-row"><label>X</label><input type="number" id="mx" placeholder="—"></div>
+      <div class="input-row"><label>Y</label><input type="number" id="my" placeholder="—"></div>
+      <div class="input-row"><label>Z</label><input type="number" id="mz" placeholder="—"></div>
+      <button class="btn full accent" onclick="move()">▶ MOVE</button>
+    </div>
+
+    <!-- Jog -->
+    <div class="section">
+      <div class="section-title">Jog</div>
+
+      <div class="step-row">
+        <div class="step-btn" onclick="setStep(0.1)">0.1</div>
+        <div class="step-btn active" id="step-1" onclick="setStep(1)">1</div>
+        <div class="step-btn" onclick="setStep(10)">10</div>
+        <div class="step-btn" onclick="setStep(50)">50</div>
+      </div>
+
+      <div class="jog-axis-label">X / Y</div>
+      <div class="jog-grid">
+        <button class="btn" onclick="jog('X', jogStep)">X +</button>
+        <button class="btn" onclick="jog('X',-jogStep)">X −</button>
+        <button class="btn" onclick="jog('Y', jogStep)">Y +</button>
+        <button class="btn" onclick="jog('Y',-jogStep)">Y −</button>
+      </div>
+
+      <div class="jog-axis-label">Z</div>
+      <div class="jog-grid">
+        <button class="btn" onclick="jog('Z', jogStep)">Z +</button>
+        <button class="btn" onclick="jog('Z',-jogStep)">Z −</button>
+      </div>
+    </div>
+
+    <!-- Home -->
+    <div class="section">
+      <div class="section-title">Home</div>
+      <button class="btn full" onclick="home('XY')">HOME XY</button>
+      <button class="btn full" onclick="home('Z')">HOME Z</button>
+      <button class="btn full danger" onclick="home('')">HOME ALL</button>
+    </div>
+
+    <!-- Calibrate link -->
+    <div class="section">
+      <div class="section-title">Tools</div>
+      <a href="/calibrate" style="text-decoration:none">
+        <button class="btn full">⬡ CALIBRATE BED</button>
+      </a>
+    </div>
+
+  </div><!-- /panel -->
+</div><!-- /workspace -->
+
+<script>
+// ── STATE ────────────────────────────────
+let jogStep = 1;
+
+// ── JOG STEP ─────────────────────────────
+function setStep(v) {
+  jogStep = v;
+  document.querySelectorAll('.step-btn').forEach(b => {
+    b.classList.toggle('active', parseFloat(b.textContent) === v);
+  });
+}
+
+// ── TOAST ────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = type;
+  clearTimeout(toastTimer);
+  if (type) toastTimer = setTimeout(() => { el.textContent = ''; el.className = ''; }, 3000);
+}
+
+// ── API HELPER ───────────────────────────
+async function api(path, body) {
+  try {
+    const opts = body !== undefined
+      ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+      : { method: 'GET' };
+    const r = await fetch(path, opts);
+    return await r.json();
+  } catch (e) {
+    toast('network error: ' + path, 'err');
+    return null;
+  }
+}
+
+// ── POSITION POLL ────────────────────────
+async function pollStatus() {
+  const d = await api('/api/status');
+  if (!d) return;
+  if (d.ok === false) { toast('printer offline', 'warn'); return; }
+  document.getElementById('px').textContent = d.x.toFixed(2);
+  document.getElementById('py').textContent = d.y.toFixed(2);
+  document.getElementById('pz').textContent = d.z.toFixed(2);
+}
+setInterval(pollStatus, 500);
+
+// ── DETECTION POLL ───────────────────────
+const STATUS_CLASS = { OK:'ok', WARN:'warn', FAIL:'fail', BLIND:'blind', OFFLINE:'blind', INIT:'blind' };
+
+async function pollDetection() {
+  const d = await api('/api/detection');
+  if (!d) return;
+
+  const badge = document.getElementById('det-badge');
+  badge.textContent = d.status;
+  badge.className   = STATUS_CLASS[d.status] ?? '';
+
+  const m = Math.min(d.motion / 300 * 100, 100);
+  const e = Math.min(d.edge   / 50  * 100, 100);
+  document.getElementById('score-motion').textContent = d.motion;
+  document.getElementById('score-edge').textContent   = d.edge;
+  document.getElementById('bar-motion-fill').style.width = m + '%';
+  document.getElementById('bar-edge-fill').style.width   = e + '%';
+}
+setInterval(pollDetection, 800);
+
+// ── MOVE ─────────────────────────────────
+async function move() {
+  const body = {};
+  const xv = parseFloat(document.getElementById('mx').value);
+  const yv = parseFloat(document.getElementById('my').value);
+  const zv = parseFloat(document.getElementById('mz').value);
+  if (!isNaN(xv)) body.x = xv;
+  if (!isNaN(yv)) body.y = yv;
+  if (!isNaN(zv)) body.z = zv;
+  if (!Object.keys(body).length) { toast('enter at least one axis value', 'warn'); return; }
+  const r = await api('/api/move', body);
+  if (r?.ok) toast('moving…', 'ok'); else toast('move failed', 'err');
+}
+
+// ── JOG ──────────────────────────────────
+async function jog(axis, dist) {
+  const r = await api('/api/jog', { axis, distance: dist });
+  if (!r?.ok) toast(`jog ${axis} failed`, 'err');
+}
+
+// ── HOME ─────────────────────────────────
+async function home(axes) {
+  toast('homing…', 'warn');
+  const r = await api('/api/home', { axes });
+  if (r?.ok) toast('homed', 'ok'); else toast('home failed', 'err');
+}
+
+// ── MJPEG STREAM ─────────────────────────
+const streamImg = document.getElementById('stream');
+streamImg.onload  = () => toast('stream live', 'ok');
+streamImg.onerror = () => {
+  toast('stream lost — retrying…', 'err');
+  setTimeout(() => { streamImg.src = '/api/stream/mjpeg?t=' + Date.now(); }, 4000);
+};
 </script>
+</body>
+</html>
